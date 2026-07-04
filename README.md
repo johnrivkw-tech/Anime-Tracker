@@ -71,5 +71,3 @@ Android Studio that's Right-click package → Refactor → Rename, plus updating
 - **Cover images** — pick from gallery (Coil for loading, a URI column to store it).
 - **Stats screen** — total anime, episodes watched, average rating, via a
   second screen or bottom sheet.
-
-Happy to build any of these next — just say which one.

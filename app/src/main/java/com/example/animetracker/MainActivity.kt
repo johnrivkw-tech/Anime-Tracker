@@ -97,10 +97,10 @@ private fun VizoraApp() {
                 arguments = listOf(navArgument("malId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val malId = backStackEntry.arguments?.getInt("malId") ?: 0
-                PlaceholderScreen(
-                    title = "Anime Details",
-                    subtitle = "The full details screen for anime #$malId arrives in Phase 4",
-                    icon = Icons.Filled.Info
+                AnimeDetailsScreen(
+                    viewModel = viewModel,
+                    malId = malId,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

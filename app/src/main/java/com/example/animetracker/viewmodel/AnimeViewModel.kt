@@ -7,6 +7,10 @@ import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeDatabase
 import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.data.network.JikanAnimeResult
+import com.example.animetracker.data.network.JikanRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +28,7 @@ import kotlinx.coroutines.launch
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: AnimeRepository
+    private val jikanRepository = JikanRepository()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -34,6 +39,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     /** The list the UI should actually render: search + status filter already applied. */
     val filteredAnime: StateFlow<List<Anime>>
+
+    // --- Online anime search (Jikan) ---
+    private val _searchResults = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val searchResults: StateFlow<List<JikanAnimeResult>> = _searchResults.asStateFlow()
+
+    private val _isSearchingApi = MutableStateFlow(false)
+    val isSearchingApi: StateFlow<Boolean> = _isSearchingApi.asStateFlow()
+
+    private val _searchApiError = MutableStateFlow<String?>(null)
+    val searchApiError: StateFlow<String?> = _searchApiError.asStateFlow()
+
+    private var searchJob: Job? = null
 
     init {
         val dao = AnimeDatabase.getDatabase(application).animeDao()
@@ -63,6 +80,45 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onStatusFilterChange(status: AnimeStatus?) {
         _statusFilter.value = status
+    }
+
+    /** Debounced online search against the Jikan API, used by the "add via search" dialog. */
+    fun searchOnline(query: String) {
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            _searchApiError.value = null
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(400) // wait for the user to stop typing before hitting the network
+            _isSearchingApi.value = true
+            _searchApiError.value = null
+            jikanRepository.searchAnime(query)
+                .onSuccess { _searchResults.value = it }
+                .onFailure { _searchApiError.value = "Couldn't reach the anime database. Check your connection." }
+            _isSearchingApi.value = false
+        }
+    }
+
+    fun clearSearchResults() {
+        searchJob?.cancel()
+        _searchResults.value = emptyList()
+        _searchApiError.value = null
+        _isSearchingApi.value = false
+    }
+
+    fun addAnimeFromSearchResult(result: JikanAnimeResult) {
+        viewModelScope.launch {
+            repository.insert(
+                Anime(
+                    name = result.title,
+                    totalEpisodes = result.episodes ?: 0,
+                    imageUrl = result.images.jpg.large_image_url ?: result.images.jpg.image_url,
+                    malId = result.mal_id
+                )
+            )
+        }
     }
 
     fun addAnime(

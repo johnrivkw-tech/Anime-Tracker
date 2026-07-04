@@ -21,5 +21,6 @@ data class Anime(
     val status: AnimeStatus = AnimeStatus.PLAN_TO_WATCH,
     val rating: Int = 0,
     val imageUrl: String? = null,
-    val malId: Int? = null
+    val malId: Int? = null,
+    val isFavorite: Boolean = false
 )

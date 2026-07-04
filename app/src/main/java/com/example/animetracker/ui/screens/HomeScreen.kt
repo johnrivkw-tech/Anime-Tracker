@@ -49,18 +49,28 @@ fun HomeScreen(viewModel: AnimeViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val statusFilter by viewModel.statusFilter.collectAsState()
 
+    val onlineResults by viewModel.searchResults.collectAsState()
+    val isSearchingApi by viewModel.isSearchingApi.collectAsState()
+    val searchApiError by viewModel.searchApiError.collectAsState()
+
     var showDialog by remember { mutableStateOf(false) }
     var animeBeingEdited by remember { mutableStateOf<Anime?>(null) }
+
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var onlineQuery by remember { mutableStateOf("") }
+
+    fun closeSearchDialog() {
+        showSearchDialog = false
+        onlineQuery = ""
+        viewModel.clearSearchResults()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("AnimeTracker") })
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                animeBeingEdited = null
-                showDialog = true
-            }) {
+            FloatingActionButton(onClick = { showSearchDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add anime")
             }
         }
@@ -128,7 +138,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                             text = if (isFiltering) {
                                 "Try a different search or filter"
                             } else {
-                                "Tap + to add your first anime"
+                                "Tap + to search for your first anime"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -177,6 +187,29 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     viewModel.addAnime(name, watched, total, status, rating)
                 }
                 showDialog = false
+            }
+        )
+    }
+
+    if (showSearchDialog) {
+        SearchAnimeDialog(
+            query = onlineQuery,
+            onQueryChange = {
+                onlineQuery = it
+                viewModel.searchOnline(it)
+            },
+            results = onlineResults,
+            isLoading = isSearchingApi,
+            error = searchApiError,
+            onDismiss = { closeSearchDialog() },
+            onSelect = { result ->
+                viewModel.addAnimeFromSearchResult(result)
+                closeSearchDialog()
+            },
+            onAddManually = {
+                closeSearchDialog()
+                animeBeingEdited = null
+                showDialog = true
             }
         )
     }

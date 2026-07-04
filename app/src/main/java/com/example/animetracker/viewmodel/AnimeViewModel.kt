@@ -16,15 +16,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * Holds UI state for the watchlist and exposes the actions the UI can trigger.
- * Extends AndroidViewModel (instead of plain ViewModel) so it can grab an
- * Application context to build the Room database, without needing a separate
- * ViewModelFactory or a DI framework — the simplest thing that works.
- */
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: AnimeRepository
@@ -33,14 +28,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // null means "no status filter, show everything"
     private val _statusFilter = MutableStateFlow<AnimeStatus?>(null)
     val statusFilter: StateFlow<AnimeStatus?> = _statusFilter.asStateFlow()
 
-    /** The list the UI should actually render: search + status filter already applied. */
     val filteredAnime: StateFlow<List<Anime>>
 
-    // --- Online anime search (Jikan) ---
+    /** Locally-tracked anime that also have a MyAnimeList ID, keyed by that ID. */
+    val localByMalId: StateFlow<Map<Int, AnimeStatus>>
+
+    /** Anime currently marked WATCHING, for the "Continue Tracking" home section. */
+    val continueTracking: StateFlow<List<Anime>>
+
+    // --- Online "add anime" search (Jikan) ---
     private val _searchResults = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
     val searchResults: StateFlow<List<JikanAnimeResult>> = _searchResults.asStateFlow()
 
@@ -51,6 +50,28 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val searchApiError: StateFlow<String?> = _searchApiError.asStateFlow()
 
     private var searchJob: Job? = null
+
+    // --- Home feed sections (Jikan) ---
+    private val _trending = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val trending: StateFlow<List<JikanAnimeResult>> = _trending.asStateFlow()
+
+    private val _popularThisSeason = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val popularThisSeason: StateFlow<List<JikanAnimeResult>> = _popularThisSeason.asStateFlow()
+
+    private val _topRated = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val topRated: StateFlow<List<JikanAnimeResult>> = _topRated.asStateFlow()
+
+    private val _newReleases = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val newReleases: StateFlow<List<JikanAnimeResult>> = _newReleases.asStateFlow()
+
+    private val _recommended = MutableStateFlow<List<JikanAnimeResult>>(emptyList())
+    val recommended: StateFlow<List<JikanAnimeResult>> = _recommended.asStateFlow()
+
+    private val _isHomeFeedLoading = MutableStateFlow(false)
+    val isHomeFeedLoading: StateFlow<Boolean> = _isHomeFeedLoading.asStateFlow()
+
+    private val _homeFeedError = MutableStateFlow<String?>(null)
+    val homeFeedError: StateFlow<String?> = _homeFeedError.asStateFlow()
 
     init {
         val dao = AnimeDatabase.getDatabase(application).animeDao()
@@ -72,6 +93,26 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+        localByMalId = repository.allAnime
+            .map { list ->
+                list.mapNotNull { anime -> anime.malId?.let { it to anime.status } }.toMap()
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyMap()
+            )
+
+        continueTracking = repository.allAnime
+            .map { list -> list.filter { it.status == AnimeStatus.WATCHING } }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
+
+        loadHomeFeed()
     }
 
     fun onSearchQueryChange(query: String) {
@@ -82,7 +123,33 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _statusFilter.value = status
     }
 
-    /** Debounced online search against the Jikan API, used by the "add via search" dialog. */
+    fun loadHomeFeed() {
+        viewModelScope.launch {
+            _isHomeFeedLoading.value = true
+            _homeFeedError.value = null
+
+            val trendingResult = jikanRepository.getTrending()
+            val popularResult = jikanRepository.getPopularThisSeason()
+            val topRatedResult = jikanRepository.getTopRated()
+            val newReleasesResult = jikanRepository.getNewReleases()
+            val recommendedResult = jikanRepository.getRecommended()
+
+            trendingResult.onSuccess { _trending.value = it }
+            popularResult.onSuccess { _popularThisSeason.value = it }
+            topRatedResult.onSuccess { _topRated.value = it }
+            newReleasesResult.onSuccess { _newReleases.value = it }
+            recommendedResult.onSuccess { _recommended.value = it }
+
+            val allFailed = listOf(trendingResult, popularResult, topRatedResult, newReleasesResult, recommendedResult)
+                .all { it.isFailure }
+            if (allFailed) {
+                _homeFeedError.value = "Couldn't load your home feed. Check your connection and try again."
+            }
+
+            _isHomeFeedLoading.value = false
+        }
+    }
+
     fun searchOnline(query: String) {
         searchJob?.cancel()
         if (query.isBlank()) {
@@ -91,7 +158,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         searchJob = viewModelScope.launch {
-            delay(400) // wait for the user to stop typing before hitting the network
+            delay(400)
             _isSearchingApi.value = true
             _searchApiError.value = null
             jikanRepository.searchAnime(query)

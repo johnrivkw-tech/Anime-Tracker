@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Anime::class], version = 4, ok exportSchema = false)
+@Database(entities = [Anime::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AnimeDatabase : RoomDatabase() {
 

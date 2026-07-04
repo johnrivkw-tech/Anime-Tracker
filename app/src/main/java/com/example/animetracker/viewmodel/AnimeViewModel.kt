@@ -8,6 +8,7 @@ import com.example.animetracker.data.AnimeDatabase
 import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.network.JikanAnimeResult
+import com.example.animetracker.data.network.JikanCharacterEntry
 import com.example.animetracker.data.network.JikanRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,11 +33,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val statusFilter: StateFlow<AnimeStatus?> = _statusFilter.asStateFlow()
 
     val filteredAnime: StateFlow<List<Anime>>
-
-    /** Locally-tracked anime that also have a MyAnimeList ID, keyed by that ID. */
+    val allLocalAnime: StateFlow<List<Anime>>
     val localByMalId: StateFlow<Map<Int, AnimeStatus>>
-
-    /** Anime currently marked WATCHING, for the "Continue Tracking" home section. */
     val continueTracking: StateFlow<List<Anime>>
 
     // --- Online "add anime" search (Jikan) ---
@@ -73,6 +71,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _homeFeedError = MutableStateFlow<String?>(null)
     val homeFeedError: StateFlow<String?> = _homeFeedError.asStateFlow()
 
+    // --- Anime details screen (Jikan) ---
+    private val _animeDetails = MutableStateFlow<JikanAnimeResult?>(null)
+    val animeDetails: StateFlow<JikanAnimeResult?> = _animeDetails.asStateFlow()
+
+    private val _isDetailsLoading = MutableStateFlow(false)
+    val isDetailsLoading: StateFlow<Boolean> = _isDetailsLoading.asStateFlow()
+
+    private val _detailsError = MutableStateFlow<String?>(null)
+    val detailsError: StateFlow<String?> = _detailsError.asStateFlow()
+
+    private val _characters = MutableStateFlow<List<JikanCharacterEntry>>(emptyList())
+    val characters: StateFlow<List<JikanCharacterEntry>> = _characters.asStateFlow()
+
     init {
         val dao = AnimeDatabase.getDatabase(application).animeDao()
         repository = AnimeRepository(dao)
@@ -89,6 +100,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 matchesQuery && matchesStatus
             }
         }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+        allLocalAnime = repository.allAnime.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
@@ -216,13 +233,74 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun incrementEpisode(anime: Anime) {
         viewModelScope.launch {
-            repository.update(anime.copy(episodesWatched = anime.episodesWatched + 1))
+            val cap = if (anime.totalEpisodes > 0) anime.totalEpisodes else Int.MAX_VALUE
+            val next = (anime.episodesWatched + 1).coerceAtMost(cap)
+            repository.update(anime.copy(episodesWatched = next))
         }
     }
 
     fun deleteAnime(anime: Anime) {
         viewModelScope.launch {
             repository.delete(anime)
+        }
+    }
+
+    // --- Details screen actions ---
+
+    fun loadAnimeDetails(malId: Int) {
+        viewModelScope.launch {
+            _isDetailsLoading.value = true
+            _detailsError.value = null
+            jikanRepository.getAnimeDetails(malId)
+                .onSuccess { _animeDetails.value = it }
+                .onFailure { _detailsError.value = "Couldn't load details. Check your connection and try again." }
+            _isDetailsLoading.value = false
+        }
+    }
+
+    fun loadAnimeCharacters(malId: Int) {
+        viewModelScope.launch {
+            jikanRepository.getAnimeCharacters(malId)
+                .onSuccess { _characters.value = it }
+            // Characters are a nice-to-have; fail silently so a missing
+            // characters list never blocks the rest of the details page.
+        }
+    }
+
+    fun clearAnimeDetails() {
+        _animeDetails.value = null
+        _detailsError.value = null
+        _characters.value = emptyList()
+    }
+
+    /** Sets (or creates, if not yet tracked) the list status for this anime. */
+    fun setAnimeStatus(details: JikanAnimeResult, existing: Anime?, status: AnimeStatus) {
+        viewModelScope.launch {
+            if (existing != null) {
+                repository.update(existing.copy(status = status))
+            } else {
+                repository.insert(
+                    Anime(
+                        name = details.title,
+                        totalEpisodes = details.episodes ?: 0,
+                        status = status,
+                        imageUrl = details.images.jpg.large_image_url ?: details.images.jpg.image_url,
+                        malId = details.mal_id
+                    )
+                )
+            }
+        }
+    }
+
+    fun rateAnime(anime: Anime, rating: Int) {
+        viewModelScope.launch {
+            repository.update(anime.copy(rating = rating))
+        }
+    }
+
+    fun toggleFavorite(anime: Anime) {
+        viewModelScope.launch {
+            repository.update(anime.copy(isFavorite = !anime.isFavorite))
         }
     }
 }

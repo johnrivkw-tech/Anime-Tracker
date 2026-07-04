@@ -1,0 +1,6 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme, used before Compose content loads and for the
+         system task-switcher entry. Actual in-app theming is handled by
+         AnimeTrackerTheme in Compose. -->
+    <style name="Theme.AnimeTracker" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

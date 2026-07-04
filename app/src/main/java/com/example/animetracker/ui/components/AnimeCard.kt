@@ -33,8 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
 
@@ -51,78 +54,92 @@ fun AnimeCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    text = anime.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+        Row(modifier = Modifier.padding(16.dp)) {
+            if (anime.imageUrl != null) {
+                AsyncImage(
+                    model = anime.imageUrl,
+                    contentDescription = anime.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 92.dp)
+                        .clip(RoundedCornerShape(8.dp))
                 )
-                Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit ${anime.name}")
-                    }
-                    IconButton(onClick = { showDeleteConfirm = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete ${anime.name}")
-                    }
-                }
+                Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusBadge(status = anime.status)
-                if (anime.rating > 0) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    RatingBadge(rating = anime.rating)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val progressText = if (anime.totalEpisodes > 0) {
-                "Episode ${anime.episodesWatched} / ${anime.totalEpisodes}"
-            } else {
-                "Episode ${anime.episodesWatched}"
-            }
-            Text(
-                text = progressText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (anime.totalEpisodes > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = {
-                        (anime.episodesWatched.toFloat() / anime.totalEpisodes.toFloat())
-                            .coerceIn(0f, 1f)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = onIncrement) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = anime.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Episode")
+                    Row {
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit ${anime.name}")
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete ${anime.name}")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusBadge(status = anime.status)
+                    if (anime.rating > 0) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        RatingBadge(rating = anime.rating)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val progressText = if (anime.totalEpisodes > 0) {
+                    "Episode ${anime.episodesWatched} / ${anime.totalEpisodes}"
+                } else {
+                    "Episode ${anime.episodesWatched}"
+                }
+                Text(
+                    text = progressText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (anime.totalEpisodes > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = {
+                            (anime.episodesWatched.toFloat() / anime.totalEpisodes.toFloat())
+                                .coerceIn(0f, 1f)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(onClick = onIncrement) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Episode")
+                    }
                 }
             }
         }

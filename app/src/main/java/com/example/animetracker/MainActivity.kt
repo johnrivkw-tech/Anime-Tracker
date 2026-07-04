@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
@@ -17,11 +17,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.animetracker.ui.navigation.BottomNavBar
 import com.example.animetracker.ui.navigation.Destination
+import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.PlaceholderScreen
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
@@ -60,10 +63,9 @@ private fun VizoraApp() {
                 .padding(paddingValues)
         ) {
             composable(Destination.HOME.route) {
-                PlaceholderScreen(
-                    title = "Home",
-                    subtitle = "Your personalized anime feed is coming soon",
-                    icon = Icons.Filled.Home
+                HomeFeedScreen(
+                    viewModel = viewModel,
+                    onAnimeClick = { malId -> navController.navigate("details/$malId") }
                 )
             }
             composable(Destination.MY_LIST.route) {
@@ -88,6 +90,17 @@ private fun VizoraApp() {
                     title = "Profile",
                     subtitle = "Your stats and settings will live here",
                     icon = Icons.Filled.Person
+                )
+            }
+            composable(
+                route = "details/{malId}",
+                arguments = listOf(navArgument("malId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val malId = backStackEntry.arguments?.getInt("malId") ?: 0
+                PlaceholderScreen(
+                    title = "Anime Details",
+                    subtitle = "The full details screen for anime #$malId arrives in Phase 4",
+                    icon = Icons.Filled.Info
                 )
             }
         }

@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.coil.compose)
 implementation(libs.androidx.lifecycle.runtime.ktx)
+implementation(libs.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 

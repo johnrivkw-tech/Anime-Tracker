@@ -49,7 +49,8 @@ dependencies {
     // Networking (online anime search) and image loading (poster art)
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)
-    implementation(libs.coil.compose)implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.coil.compose)
+implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 

@@ -65,7 +65,7 @@ private fun VizoraApp() {
             composable(Destination.HOME.route) {
                 HomeFeedScreen(
                     viewModel = viewModel,
-                    onAnimeClick = { malId -> navController.navigate("details/$malId") }
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
                 )
             }
             composable(Destination.MY_LIST.route) {
@@ -93,13 +93,13 @@ private fun VizoraApp() {
                 )
             }
             composable(
-                route = "details/{malId}",
-                arguments = listOf(navArgument("malId") { type = NavType.IntType })
+                route = "details/{aniListId}",
+                arguments = listOf(navArgument("aniListId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val malId = backStackEntry.arguments?.getInt("malId") ?: 0
+                val aniListId = backStackEntry.arguments?.getInt("aniListId") ?: 0
                 AnimeDetailsScreen(
                     viewModel = viewModel,
-                    malId = malId,
+                    aniListId = aniListId,
                     onBack = { navController.popBackStack() }
                 )
             }

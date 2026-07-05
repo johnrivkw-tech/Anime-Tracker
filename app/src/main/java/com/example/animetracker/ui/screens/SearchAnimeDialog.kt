@@ -36,21 +36,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.example.animetracker.data.network.JikanAnimeResult
+import com.example.animetracker.data.network.AniListMedia
 
 /**
- * Full-screen dialog for searching the Jikan (MyAnimeList) database and
- * adding a result straight to the watchlist, complete with poster art.
+ * Full-screen dialog for searching the AniList database and adding a
+ * result straight to the watchlist, complete with poster art.
  */
 @Composable
 fun SearchAnimeDialog(
     query: String,
     onQueryChange: (String) -> Unit,
-    results: List<JikanAnimeResult>,
+    results: List<AniListMedia>,
     isLoading: Boolean,
     error: String?,
     onDismiss: () -> Unit,
-    onSelect: (JikanAnimeResult) -> Unit,
+    onSelect: (AniListMedia) -> Unit,
     onAddManually: () -> Unit
 ) {
     Dialog(
@@ -103,7 +103,7 @@ fun SearchAnimeDialog(
                         }
                         else -> {
                             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(results, key = { it.mal_id }) { result ->
+                                items(results, key = { it.id }) { result ->
                                     SearchResultRow(result = result, onClick = { onSelect(result) })
                                 }
                             }
@@ -127,7 +127,7 @@ fun SearchAnimeDialog(
 }
 
 @Composable
-private fun SearchResultRow(result: JikanAnimeResult, onClick: () -> Unit) {
+private fun SearchResultRow(result: AniListMedia, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,8 +136,8 @@ private fun SearchResultRow(result: JikanAnimeResult, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = result.images.jpg.image_url,
-            contentDescription = result.title,
+            model = result.posterUrl,
+            contentDescription = result.displayTitle,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(width = 56.dp, height = 80.dp)
@@ -146,7 +146,7 @@ private fun SearchResultRow(result: JikanAnimeResult, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = result.title,
+                text = result.displayTitle,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

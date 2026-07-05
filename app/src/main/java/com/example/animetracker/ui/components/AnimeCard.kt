@@ -17,8 +17,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -35,11 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.ui.theme.Blaze
+import com.example.animetracker.ui.theme.Bone
+import com.example.animetracker.ui.theme.Charcoal
+import com.example.animetracker.ui.theme.CharcoalHigh
+import com.example.animetracker.ui.theme.Pulse
+import com.example.animetracker.ui.theme.Smoke
+import java.util.Locale
 
 @Composable
 fun AnimeCard(
@@ -50,19 +57,20 @@ fun AnimeCard(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(14.dp),
+        color = Charcoal
     ) {
-        Row(modifier = Modifier.padding(16.dp)) {
+        Row(modifier = Modifier.padding(12.dp)) {
             if (anime.imageUrl != null) {
                 AsyncImage(
                     model = anime.imageUrl,
                     contentDescription = anime.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(width = 64.dp, height = 92.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(width = 68.dp, height = 96.dp)
+                        .clip(RoundedCornerShape(10.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }
@@ -76,16 +84,17 @@ fun AnimeCard(
                     Text(
                         text = anime.name,
                         style = MaterialTheme.typography.titleMedium,
+                        color = Bone,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     Row {
                         IconButton(onClick = onEdit) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit ${anime.name}")
+                            Icon(Icons.Default.Edit, contentDescription = "Edit ${anime.name}", tint = Smoke)
                         }
                         IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete ${anime.name}")
+                            Icon(Icons.Default.Delete, contentDescription = "Delete ${anime.name}", tint = Smoke)
                         }
                     }
                 }
@@ -100,7 +109,7 @@ fun AnimeCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 val progressText = if (anime.totalEpisodes > 0) {
                     "Episode ${anime.episodesWatched} / ${anime.totalEpisodes}"
@@ -110,7 +119,7 @@ fun AnimeCard(
                 Text(
                     text = progressText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Smoke
                 )
 
                 if (anime.totalEpisodes > 0) {
@@ -120,7 +129,11 @@ fun AnimeCard(
                             (anime.episodesWatched.toFloat() / anime.totalEpisodes.toFloat())
                                 .coerceIn(0f, 1f)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        color = Blaze,
+                        trackColor = CharcoalHigh,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
                     )
                 }
 
@@ -131,14 +144,21 @@ fun AnimeCard(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(onClick = onIncrement) {
+                    Button(
+                        onClick = onIncrement,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Blaze,
+                            contentColor = Bone
+                        )
+                    ) {
                         Icon(
                             Icons.Default.Add,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Episode")
+                        Text("Episode", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -148,19 +168,20 @@ fun AnimeCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Remove anime?") },
-            text = { Text("Remove \"${anime.name}\" from your watchlist? This can't be undone.") },
+            containerColor = Charcoal,
+            title = { Text("Remove anime?", color = Bone) },
+            text = { Text("Remove \"${anime.name}\" from your watchlist? This can't be undone.", color = Smoke) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteConfirm = false
                 }) {
-                    Text("Remove")
+                    Text("Remove", color = Pulse, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Smoke)
                 }
             }
         )
@@ -171,14 +192,14 @@ fun AnimeCard(
 private fun StatusBadge(status: AnimeStatus, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer
+        shape = RoundedCornerShape(50),
+        color = CharcoalHigh
     ) {
         Text(
-            text = status.label,
+            text = status.label.uppercase(Locale.US),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            color = Bone,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
         )
     }
 }
@@ -192,14 +213,14 @@ private fun RatingBadge(rating: Int, modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Filled.Star,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = Pulse,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(2.dp))
         Text(
             text = "$rating/10",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = Smoke
         )
     }
 }

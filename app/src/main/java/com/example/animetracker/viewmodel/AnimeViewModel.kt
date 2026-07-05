@@ -1,15 +1,19 @@
 package com.example.animetracker.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeDatabase
 import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
+import com.example.animetracker.ui.model.ProfileStats
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,11 +24,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: AnimeRepository
     private val aniListRepository = AniListRepository()
+    private val profilePrefs = ProfilePrefs(application)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -84,6 +92,55 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _characters = MutableStateFlow<List<AniListCharacterEdge>>(emptyList())
     val characters: StateFlow<List<AniListCharacterEdge>> = _characters.asStateFlow()
 
+    // --- Discover tab: browse by genre/season/year (AniList) ---
+    private val _discoverGenre = MutableStateFlow<String?>(null)
+    val discoverGenre: StateFlow<String?> = _discoverGenre.asStateFlow()
+
+    private val _discoverSeason = MutableStateFlow<String?>(null)
+    val discoverSeason: StateFlow<String?> = _discoverSeason.asStateFlow()
+
+    private val _discoverYear = MutableStateFlow<Int?>(null)
+    val discoverYear: StateFlow<Int?> = _discoverYear.asStateFlow()
+
+    private val _discoverResults = MutableStateFlow<List<AniListMedia>>(emptyList())
+    val discoverResults: StateFlow<List<AniListMedia>> = _discoverResults.asStateFlow()
+
+    private val _isDiscoverLoading = MutableStateFlow(false)
+    val isDiscoverLoading: StateFlow<Boolean> = _isDiscoverLoading.asStateFlow()
+
+    private val _discoverError = MutableStateFlow<String?>(null)
+    val discoverError: StateFlow<String?> = _discoverError.asStateFlow()
+
+    private var discoverJob: Job? = null
+
+    // --- Search tab: full-catalog search, separate from the "add to list" dialog ---
+    private val _catalogQuery = MutableStateFlow("")
+    val catalogQuery: StateFlow<String> = _catalogQuery.asStateFlow()
+
+    private val _catalogResults = MutableStateFlow<List<AniListMedia>>(emptyList())
+    val catalogResults: StateFlow<List<AniListMedia>> = _catalogResults.asStateFlow()
+
+    private val _isCatalogSearching = MutableStateFlow(false)
+    val isCatalogSearching: StateFlow<Boolean> = _isCatalogSearching.asStateFlow()
+
+    private val _catalogError = MutableStateFlow<String?>(null)
+    val catalogError: StateFlow<String?> = _catalogError.asStateFlow()
+
+    private var catalogJob: Job? = null
+
+    // --- Profile: banner image + display name (SharedPreferences) ---
+    private val _profileBannerPath = MutableStateFlow(profilePrefs.getBannerPath())
+    val profileBannerPath: StateFlow<String?> = _profileBannerPath.asStateFlow()
+
+    private val _profileDisplayName = MutableStateFlow(profilePrefs.getDisplayName())
+    val profileDisplayName: StateFlow<String> = _profileDisplayName.asStateFlow()
+
+    private val _isBannerSaving = MutableStateFlow(false)
+    val isBannerSaving: StateFlow<Boolean> = _isBannerSaving.asStateFlow()
+
+    // --- Profile: aggregate watchlist stats (local) ---
+    val profileStats: StateFlow<ProfileStats>
+
     init {
         val dao = AnimeDatabase.getDatabase(application).animeDao()
         repository = AnimeRepository(dao)
@@ -129,7 +186,31 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 initialValue = emptyList()
             )
 
+        profileStats = repository.allAnime
+            .map { list ->
+                // AniList's per-episode runtime when we have it; a flat
+                // 24 min/episode (typical TV anime) for entries that don't.
+                val totalMinutes = list.sumOf { anime ->
+                    val perEpisode = (anime.episodeDurationMinutes ?: 24).toLong()
+                    perEpisode * anime.episodesWatched
+                }
+                ProfileStats(
+                    totalAnime = list.size,
+                    completed = list.count { it.status == AnimeStatus.COMPLETED },
+                    watching = list.count { it.status == AnimeStatus.WATCHING },
+                    planToWatch = list.count { it.status == AnimeStatus.PLAN_TO_WATCH },
+                    favorites = list.count { it.isFavorite },
+                    totalWatchMinutes = totalMinutes
+                )
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = ProfileStats()
+            )
+
         loadHomeFeed()
+        loadDiscover()
     }
 
     fun onSearchQueryChange(query: String) {
@@ -199,7 +280,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     name = result.displayTitle,
                     totalEpisodes = result.episodes ?: 0,
                     imageUrl = result.posterUrl,
-                    aniListId = result.id
+                    aniListId = result.id,
+                    episodeDurationMinutes = result.duration
                 )
             )
         }
@@ -285,7 +367,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         totalEpisodes = details.episodes ?: 0,
                         status = status,
                         imageUrl = details.posterUrl,
-                        aniListId = details.id
+                        aniListId = details.id,
+                        episodeDurationMinutes = details.duration
                     )
                 )
             }
@@ -301,6 +384,95 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleFavorite(anime: Anime) {
         viewModelScope.launch {
             repository.update(anime.copy(isFavorite = !anime.isFavorite))
+        }
+    }
+
+    // --- Discover tab actions ---
+
+    fun setDiscoverGenre(genre: String?) {
+        _discoverGenre.value = genre
+        loadDiscover()
+    }
+
+    fun setDiscoverSeason(season: String?) {
+        _discoverSeason.value = season
+        loadDiscover()
+    }
+
+    fun setDiscoverYear(year: Int?) {
+        _discoverYear.value = year
+        loadDiscover()
+    }
+
+    fun loadDiscover() {
+        discoverJob?.cancel()
+        discoverJob = viewModelScope.launch {
+            _isDiscoverLoading.value = true
+            _discoverError.value = null
+            aniListRepository.discoverAnime(
+                genre = _discoverGenre.value,
+                season = _discoverSeason.value,
+                seasonYear = _discoverYear.value
+            ).onSuccess { _discoverResults.value = it }
+                .onFailure { _discoverError.value = "Couldn't load results. Check your connection and try again." }
+            _isDiscoverLoading.value = false
+        }
+    }
+
+    // --- Search tab actions ---
+
+    fun onCatalogQueryChange(query: String) {
+        _catalogQuery.value = query
+        catalogJob?.cancel()
+        if (query.isBlank()) {
+            _catalogResults.value = emptyList()
+            _catalogError.value = null
+            _isCatalogSearching.value = false
+            return
+        }
+        catalogJob = viewModelScope.launch {
+            delay(400)
+            _isCatalogSearching.value = true
+            _catalogError.value = null
+            aniListRepository.searchAnime(query)
+                .onSuccess { _catalogResults.value = it }
+                .onFailure { _catalogError.value = "Couldn't reach the anime database. Check your connection." }
+            _isCatalogSearching.value = false
+        }
+    }
+
+    // --- Profile actions ---
+
+    fun setDisplayName(name: String) {
+        profilePrefs.setDisplayName(name)
+        _profileDisplayName.value = name
+    }
+
+    /**
+     * Copies the picked photo into the app's private storage and remembers
+     * its path, since content:// URIs from the photo picker aren't
+     * guaranteed to stay readable after the app process dies.
+     */
+    fun setProfileBanner(uri: Uri) {
+        viewModelScope.launch {
+            _isBannerSaving.value = true
+            val savedPath = withContext(Dispatchers.IO) {
+                try {
+                    val context = getApplication<Application>()
+                    val destFile = File(context.filesDir, "profile_banner.jpg")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        FileOutputStream(destFile).use { output -> input.copyTo(output) }
+                    }
+                    destFile.absolutePath
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (savedPath != null) {
+                profilePrefs.setBannerPath(savedPath)
+                _profileBannerPath.value = savedPath
+            }
+            _isBannerSaving.value = false
         }
     }
 }

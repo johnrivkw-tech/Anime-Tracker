@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
  * A single anime entry in the user's watchlist.
  *
  * [totalEpisodes] of 0 means "unknown / not set". [rating] of 0 means
- * "not rated yet" (valid ratings are 1-10). [imageUrl] and [malId] are
+ * "not rated yet" (valid ratings are 1-10). [imageUrl] and [aniListId] are
  * filled in automatically when added via online search, and stay null
  * for manually-added entries.
  */
@@ -21,6 +21,6 @@ data class Anime(
     val status: AnimeStatus = AnimeStatus.PLAN_TO_WATCH,
     val rating: Int = 0,
     val imageUrl: String? = null,
-    val malId: Int? = null,
+    val aniListId: Int? = null,
     val isFavorite: Boolean = false
 )

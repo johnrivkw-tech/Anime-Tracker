@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import com.example.animetracker.ui.components.AnimePosterCard
 import com.example.animetracker.ui.model.toHomeCardItem
+import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 /**
@@ -52,7 +54,12 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Search") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Search") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CharcoalHigh)
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

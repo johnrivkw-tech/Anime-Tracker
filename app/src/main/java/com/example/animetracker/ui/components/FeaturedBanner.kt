@@ -56,7 +56,7 @@ fun FeaturedBanner(item: HomeCardItem?, onClick: () -> Unit, modifier: Modifier 
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
-            model = item.imageUrl,
+            model = item.bannerUrl ?: item.imageUrl,
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

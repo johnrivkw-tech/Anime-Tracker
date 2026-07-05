@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -25,6 +27,7 @@ import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.ProfileScreen
 import com.example.animetracker.ui.screens.SearchScreen
+import com.example.animetracker.ui.screens.SplashScreen
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
 import com.example.animetracker.viewmodel.AnimeViewModel
 
@@ -49,6 +52,12 @@ class MainActivity : ComponentActivity() {
 private fun VizoraApp() {
     val navController = rememberNavController()
     val viewModel: AnimeViewModel = viewModel()
+    val isAppReady by viewModel.isAppReady.collectAsState()
+
+    if (!isAppReady) {
+        SplashScreen()
+        return
+    }
 
     Scaffold(
         bottomBar = { BottomNavBar(navController = navController) }

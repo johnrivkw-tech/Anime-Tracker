@@ -13,7 +13,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
@@ -21,11 +23,14 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,6 +44,13 @@ import androidx.compose.ui.unit.dp
 import com.example.animetracker.data.network.ANILIST_GENRES
 import com.example.animetracker.ui.components.AnimePosterCard
 import com.example.animetracker.ui.model.toHomeCardItem
+import com.example.animetracker.ui.theme.Blaze
+import com.example.animetracker.ui.theme.Bone
+import com.example.animetracker.ui.theme.Charcoal
+import com.example.animetracker.ui.theme.CharcoalHigh
+import com.example.animetracker.ui.theme.ErrorRed
+import com.example.animetracker.ui.theme.Smoke
+import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.time.LocalDate
 
@@ -73,7 +85,16 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     val yearOptions = remember(currentYear) { (currentYear downTo currentYear - 14).toList() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Discover") }) }
+        containerColor = Void,
+        topBar = {
+            TopAppBar(
+                title = { Text("Discover") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Void,
+                    titleContentColor = Bone
+                )
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -94,13 +115,17 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                     FilterChip(
                         selected = season == null,
                         onClick = { viewModel.setDiscoverSeason(null) },
-                        label = { Text("Any Season") }
+                        label = { Text("Any Season") },
+                        shape = RoundedCornerShape(50),
+                        colors = pillChipColors()
                     )
                     SEASONS.forEach { s ->
                         FilterChip(
                             selected = season == s,
                             onClick = { viewModel.setDiscoverSeason(if (season == s) null else s) },
-                            label = { Text(seasonLabel(s)) }
+                            label = { Text(seasonLabel(s)) },
+                            shape = RoundedCornerShape(50),
+                            colors = pillChipColors()
                         )
                     }
                 }
@@ -122,17 +147,29 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Year") },
+                        shape = RoundedCornerShape(14.dp),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearMenuExpanded) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Charcoal,
+                            unfocusedContainerColor = Charcoal,
+                            focusedBorderColor = Blaze,
+                            unfocusedBorderColor = Charcoal,
+                            focusedTextColor = Bone,
+                            unfocusedTextColor = Bone,
+                            focusedLabelColor = Blaze,
+                            unfocusedLabelColor = Smoke
+                        ),
                         modifier = Modifier
                             .menuAnchor()
                             .fillMaxWidth()
                     )
                     DropdownMenu(
                         expanded = yearMenuExpanded,
-                        onDismissRequest = { yearMenuExpanded = false }
+                        onDismissRequest = { yearMenuExpanded = false },
+                        containerColor = Charcoal
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Any Year") },
+                            text = { Text("Any Year", color = Bone) },
                             onClick = {
                                 viewModel.setDiscoverYear(null)
                                 yearMenuExpanded = false
@@ -140,7 +177,7 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         )
                         yearOptions.forEach { y ->
                             DropdownMenuItem(
-                                text = { Text(y.toString()) },
+                                text = { Text(y.toString(), color = Bone) },
                                 onClick = {
                                     viewModel.setDiscoverYear(y)
                                     yearMenuExpanded = false
@@ -162,13 +199,17 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                 FilterChip(
                     selected = genre == null,
                     onClick = { viewModel.setDiscoverGenre(null) },
-                    label = { Text("All Genres") }
+                    label = { Text("All Genres") },
+                    shape = RoundedCornerShape(50),
+                    colors = pillChipColors()
                 )
                 ANILIST_GENRES.forEach { g ->
                     FilterChip(
                         selected = genre == g,
                         onClick = { viewModel.setDiscoverGenre(if (genre == g) null else g) },
-                        label = { Text(g) }
+                        label = { Text(g) },
+                        shape = RoundedCornerShape(50),
+                        colors = pillChipColors()
                     )
                 }
             }
@@ -176,7 +217,7 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     isLoading && items.isEmpty() -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
                     }
                     error != null && items.isEmpty() -> {
                         Column(
@@ -185,10 +226,18 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         ) {
                             Text(
                                 text = error ?: "",
-                                color = MaterialTheme.colorScheme.error,
+                                color = ErrorRed,
                                 textAlign = TextAlign.Center
                             )
-                            Button(onClick = { viewModel.loadDiscover() }, modifier = Modifier.padding(top = 12.dp)) {
+                            Button(
+                                onClick = { viewModel.loadDiscover() },
+                                modifier = Modifier.padding(top = 12.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Blaze,
+                                    contentColor = Bone
+                                )
+                            ) {
                                 Text("Retry")
                             }
                         }
@@ -197,7 +246,7 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         Text(
                             text = "No anime match these filters",
                             modifier = Modifier.align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Smoke
                         )
                     }
                     else -> {
@@ -221,3 +270,11 @@ fun DiscoverScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
         }
     }
 }
+
+@Composable
+private fun pillChipColors() = FilterChipDefaults.filterChipColors(
+    containerColor = CharcoalHigh,
+    labelColor = Smoke,
+    selectedContainerColor = Blaze,
+    selectedLabelColor = Bone
+)

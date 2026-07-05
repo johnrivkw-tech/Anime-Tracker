@@ -1,4 +1,4 @@
-    package com.example.animetracker.ui.navigation
+package com.example.animetracker.ui.navigation
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Icon
@@ -48,7 +48,7 @@ fun BottomNavBar(navController: NavHostController) {
                     selectedTextColor = Blaze,
                     unselectedIconColor = Smoke,
                     unselectedTextColor = Smoke,
-                    indicatorColor = Charcoal
+                    indicatorColor = Blaze.copy(alpha = 0.18f)
                 )
             )
         }

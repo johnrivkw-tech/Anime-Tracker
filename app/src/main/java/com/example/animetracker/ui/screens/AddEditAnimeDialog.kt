@@ -18,7 +18,9 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.ui.theme.Blaze
+import com.example.animetracker.ui.theme.Bone
+import com.example.animetracker.ui.theme.CharcoalHigh
+import com.example.animetracker.ui.theme.Pulse
 
 /**
  * Shared dialog for both adding a new anime and editing an existing one.
@@ -62,7 +68,10 @@ fun AddEditAnimeDialog(
     var nameError by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = CharcoalHigh)
+        ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     text = if (anime == null) "Add anime" else "Edit anime",
@@ -128,7 +137,11 @@ fun AddEditAnimeDialog(
                         FilterChip(
                             selected = status == option,
                             onClick = { status = option },
-                            label = { Text(option.label) }
+                            label = { Text(option.label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Blaze,
+                                selectedLabelColor = Bone
+                            )
                         )
                     }
                 }
@@ -149,7 +162,7 @@ fun AddEditAnimeDialog(
                             imageVector = if (star <= rating) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = "Rate $star out of 10",
                             tint = if (star <= rating) {
-                                MaterialTheme.colorScheme.primary
+                                Pulse
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },

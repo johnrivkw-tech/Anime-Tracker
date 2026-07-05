@@ -2,6 +2,13 @@ package com.example.animetracker.data.network
 
 import java.time.LocalDate
 
+/** AniList's fixed genre vocabulary, used to populate the Discover filter chips. */
+val ANILIST_GENRES = listOf(
+    "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy", "Horror",
+    "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance",
+    "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"
+)
+
 // GraphQL field selection shared by every query below, aliasing `status` to
 // `rawStatus` so AniListMedia can expose its own human-readable `status`.
 private const val MEDIA_FIELDS = """
@@ -9,6 +16,7 @@ private const val MEDIA_FIELDS = """
     idMal
     title { romaji english native }
     episodes
+    duration
     averageScore
     rawStatus: status
     season
@@ -42,6 +50,23 @@ private val DETAILS_QUERY = """
     query(${'$'}id: Int) {
       Media(id: ${'$'}id, type: ANIME) {
         $MEDIA_FIELDS
+      }
+    }
+""".trimIndent()
+
+private val DISCOVER_QUERY = """
+    query(${'$'}genre: String, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}sort: [MediaSort], ${'$'}perPage: Int, ${'$'}page: Int) {
+      Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+        media(
+          genre: ${'$'}genre
+          season: ${'$'}season
+          seasonYear: ${'$'}seasonYear
+          sort: ${'$'}sort
+          type: ANIME
+          isAdult: false
+        ) {
+          $MEDIA_FIELDS
+        }
       }
     }
 """.trimIndent()
@@ -115,6 +140,30 @@ class AniListRepository {
 
     suspend fun getRecommended(): Result<List<AniListMedia>> = safeCall {
         fetchList(sort = "FAVOURITES_DESC")
+    }
+
+    /** Browse the catalog by genre/season/year for the Discover tab, sorted by popularity. */
+    suspend fun discoverAnime(
+        genre: String?,
+        season: String?,
+        seasonYear: Int?,
+        page: Int = 1
+    ): Result<List<AniListMedia>> = safeCall {
+        val response = AniListApi.service.searchMedia(
+            AniListRequest(
+                query = DISCOVER_QUERY,
+                variables = mapOf(
+                    "genre" to genre,
+                    "season" to season,
+                    "seasonYear" to seasonYear,
+                    "sort" to listOf("POPULARITY_DESC"),
+                    "perPage" to 30,
+                    "page" to page
+                )
+            )
+        )
+        checkErrors(response.errors)
+        response.data?.Page?.media ?: emptyList()
     }
 
     suspend fun getAnimeDetails(aniListId: Int): Result<AniListMedia> = safeCall {

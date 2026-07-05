@@ -79,6 +79,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _homeFeedError = MutableStateFlow<String?>(null)
     val homeFeedError: StateFlow<String?> = _homeFeedError.asStateFlow()
 
+    // Flips to true once the initial home feed load finishes (success or
+    // failure) and stays true afterward, even if loadHomeFeed() is called
+    // again later (e.g. a retry button or pull-to-refresh). MainActivity
+    // gates the splash screen on this so the app doesn't reveal a half-loaded
+    // UI on cold start.
+    private val _isAppReady = MutableStateFlow(false)
+    val isAppReady: StateFlow<Boolean> = _isAppReady.asStateFlow()
+
     // --- Anime details screen (AniList) ---
     private val _animeDetails = MutableStateFlow<AniListMedia?>(null)
     val animeDetails: StateFlow<AniListMedia?> = _animeDetails.asStateFlow()
@@ -245,6 +253,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _isHomeFeedLoading.value = false
+            _isAppReady.value = true
         }
     }
 

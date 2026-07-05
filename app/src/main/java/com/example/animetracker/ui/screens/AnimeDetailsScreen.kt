@@ -63,15 +63,15 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
-import com.example.animetracker.data.network.JikanAnimeResult
-import com.example.animetracker.data.network.JikanCharacterEntry
+import com.example.animetracker.data.network.AniListCharacterEdge
+import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimeDetailsScreen(
     viewModel: AnimeViewModel,
-    malId: Int,
+    aniListId: Int,
     onBack: () -> Unit
 ) {
     val details by viewModel.animeDetails.collectAsState()
@@ -81,17 +81,17 @@ fun AnimeDetailsScreen(
     val allLocal by viewModel.allLocalAnime.collectAsState()
     val context = LocalContext.current
 
-    val localEntry = remember(allLocal, malId) { allLocal.firstOrNull { it.malId == malId } }
+    val localEntry = remember(allLocal, aniListId) { allLocal.firstOrNull { it.aniListId == aniListId } }
 
-    LaunchedEffect(malId) {
-        viewModel.loadAnimeDetails(malId)
-        viewModel.loadAnimeCharacters(malId)
+    LaunchedEffect(aniListId) {
+        viewModel.loadAnimeDetails(aniListId)
+        viewModel.loadAnimeCharacters(aniListId)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(details?.title ?: "") },
+                title = { Text(details?.displayTitle ?: "") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -108,12 +108,12 @@ fun AnimeDetailsScreen(
                         }
                     }
                     IconButton(onClick = {
-                        val title = details?.title ?: "this anime"
+                        val title = details?.displayTitle ?: "this anime"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "Check out $title on MyAnimeList: https://myanimelist.net/anime/$malId"
+                                "Check out $title on AniList: https://anilist.co/anime/$aniListId"
                             )
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share via"))
@@ -141,7 +141,7 @@ fun AnimeDetailsScreen(
                 ) {
                     Text(text = error ?: "", color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = { viewModel.loadAnimeDetails(malId) }) {
+                    Button(onClick = { viewModel.loadAnimeDetails(aniListId) }) {
                         Text("Retry")
                     }
                 }
@@ -167,9 +167,9 @@ fun AnimeDetailsScreen(
 
 @Composable
 private fun DetailsContent(
-    details: JikanAnimeResult,
+    details: AniListMedia,
     localEntry: Anime?,
-    characters: List<JikanCharacterEntry>,
+    characters: List<AniListCharacterEdge>,
     paddingValues: PaddingValues,
     onSetStatus: (AnimeStatus) -> Unit,
     onRemove: (Anime) -> Unit,
@@ -188,7 +188,7 @@ private fun DetailsContent(
         }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text(text = details.title, style = MaterialTheme.typography.headlineSmall)
+                Text(text = details.displayTitle, style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -212,8 +212,8 @@ private fun DetailsContent(
 
                 Spacer(modifier = Modifier.height(4.dp))
                 val seasonYear = listOfNotNull(
-                    details.season?.replaceFirstChar { it.uppercase() },
-                    details.year?.toString()
+                    details.season?.lowercase()?.replaceFirstChar { it.uppercase() },
+                    details.seasonYear?.toString()
                 ).joinToString(" ")
                 val episodeText = if (details.episodes != null) "${details.episodes} episodes" else "Episodes unknown"
                 Text(
@@ -222,10 +222,10 @@ private fun DetailsContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (details.studios.isNotEmpty()) {
+                if (details.studioNames.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Studio: ${details.studios.joinToString(", ") { it.name }}",
+                        text = "Studio: ${details.studioNames.joinToString(", ")}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -237,13 +237,13 @@ private fun DetailsContent(
                         modifier = Modifier.horizontalScroll(scroll),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        details.genres.forEach { genre ->
+                        details.genres.forEach { genreName ->
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
-                                    text = genre.name,
+                                    text = genreName,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -253,13 +253,11 @@ private fun DetailsContent(
                     }
                 }
 
-                if (!details.trailer?.embed_url.isNullOrBlank() || !details.trailer?.url.isNullOrBlank()) {
+                val trailerUrl = details.trailer?.videoUrl
+                if (trailerUrl != null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = {
-                            val url = details.trailer?.url ?: details.trailer?.embed_url
-                            if (url != null) onWatchTrailer(url)
-                        },
+                        onClick = { onWatchTrailer(trailerUrl) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
@@ -310,7 +308,7 @@ private fun DetailsContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(characters.take(15), key = { it.character.mal_id }) { entry ->
+                    items(characters.take(15), key = { it.node.id }) { entry ->
                         CharacterCard(entry = entry)
                     }
                 }
@@ -320,11 +318,11 @@ private fun DetailsContent(
 }
 
 @Composable
-private fun HeroSection(details: JikanAnimeResult) {
+private fun HeroSection(details: AniListMedia) {
     Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
         AsyncImage(
-            model = details.images.jpg.large_image_url ?: details.images.jpg.image_url,
-            contentDescription = details.title,
+            model = details.bannerImage ?: details.posterUrl,
+            contentDescription = details.displayTitle,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxWidth().height(220.dp)
         )
@@ -348,7 +346,7 @@ private fun HeroSection(details: JikanAnimeResult) {
             shadowElevation = 8.dp
         ) {
             AsyncImage(
-                model = details.images.jpg.image_url,
+                model = details.posterUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -429,20 +427,20 @@ private fun TrackingSection(
 }
 
 @Composable
-private fun CharacterCard(entry: JikanCharacterEntry) {
+private fun CharacterCard(entry: AniListCharacterEdge) {
     Column(
         modifier = Modifier.width(80.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = entry.character.images.jpg.image_url,
-            contentDescription = entry.character.name,
+            model = entry.imageUrl,
+            contentDescription = entry.displayName,
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(72.dp).clip(CircleShape)
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = entry.character.name,
+            text = entry.displayName,
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 2

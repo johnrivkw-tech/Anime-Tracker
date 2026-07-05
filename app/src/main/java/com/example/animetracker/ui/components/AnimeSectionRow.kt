@@ -17,6 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.ui.model.HomeCardItem
+import com.example.animetracker.ui.theme.Blaze
+import com.example.animetracker.ui.theme.Bone
+import com.example.animetracker.ui.theme.Smoke
 
 @Composable
 fun AnimeSectionRow(
@@ -26,24 +29,25 @@ fun AnimeSectionRow(
     onItemClick: (HomeCardItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(vertical = 8.dp)) {
+    Column(modifier = modifier.padding(vertical = 10.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
+            color = Bone,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         when {
             isLoading -> {
                 Row(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = Blaze, modifier = Modifier.size(24.dp))
                 }
             }
             items.isEmpty() -> {
                 Text(
                     text = "Nothing to show yet",
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Smoke,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

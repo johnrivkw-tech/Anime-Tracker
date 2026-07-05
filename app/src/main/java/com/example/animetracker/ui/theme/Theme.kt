@@ -1,50 +1,41 @@
 package com.example.animetracker.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// Dark-mode-only, intentionally — no light theme, no dynamic wallpaper color.
+// The brand identity (Void background + Blaze/Pulse accents) is the point,
+// so we don't hand it over to Material You's per-device palette.
+private val AppColorScheme = darkColorScheme(
+    primary = Blaze,
+    onPrimary = Bone,
+    primaryContainer = BlazeDim,
+    onPrimaryContainer = Bone,
+    secondary = Pulse,
+    onSecondary = Bone,
+    secondaryContainer = Charcoal,
+    onSecondaryContainer = Bone,
+    tertiary = Pulse,
+    onTertiary = Bone,
+    background = Void,
+    onBackground = Bone,
+    surface = Charcoal,
+    onSurface = Bone,
+    surfaceVariant = CharcoalHigh,
+    onSurfaceVariant = Smoke,
+    outline = DividerColor,
+    outlineVariant = DividerColor,
+    error = ErrorRed,
+    onError = Void
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-)
-
-/**
- * App-wide theme. Follows the system dark/light setting by default and, on
- * Android 12+, uses the user's wallpaper-based dynamic color palette. Both
- * can be overridden by the caller if you want to add an in-app theme toggle
- * later.
- */
 @Composable
 fun AnimeTrackerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = AppColorScheme,
         typography = Typography,
         content = content
     )

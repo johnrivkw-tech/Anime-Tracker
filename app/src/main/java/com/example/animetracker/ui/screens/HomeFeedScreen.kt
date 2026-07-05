@@ -36,24 +36,24 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     val newReleases by viewModel.newReleases.collectAsState()
     val recommended by viewModel.recommended.collectAsState()
     val continueTracking by viewModel.continueTracking.collectAsState()
-    val localByMalId by viewModel.localByMalId.collectAsState()
+    val localByAniListId by viewModel.localByAniListId.collectAsState()
     val isLoading by viewModel.isHomeFeedLoading.collectAsState()
     val error by viewModel.homeFeedError.collectAsState()
 
-    val trendingItems = remember(trending, localByMalId) {
-        trending.map { it.toHomeCardItem(localByMalId[it.mal_id]) }
+    val trendingItems = remember(trending, localByAniListId) {
+        trending.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
-    val popularItems = remember(popularSeason, localByMalId) {
-        popularSeason.map { it.toHomeCardItem(localByMalId[it.mal_id]) }
+    val popularItems = remember(popularSeason, localByAniListId) {
+        popularSeason.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
-    val topRatedItems = remember(topRated, localByMalId) {
-        topRated.map { it.toHomeCardItem(localByMalId[it.mal_id]) }
+    val topRatedItems = remember(topRated, localByAniListId) {
+        topRated.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
-    val newReleaseItems = remember(newReleases, localByMalId) {
-        newReleases.map { it.toHomeCardItem(localByMalId[it.mal_id]) }
+    val newReleaseItems = remember(newReleases, localByAniListId) {
+        newReleases.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
-    val recommendedItems = remember(recommended, localByMalId) {
-        recommended.map { it.toHomeCardItem(localByMalId[it.mal_id]) }
+    val recommendedItems = remember(recommended, localByAniListId) {
+        recommended.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
     val continueItems = remember(continueTracking) {
         continueTracking.map { it.toHomeCardItem() }
@@ -91,7 +91,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                 item {
                     FeaturedBanner(
                         item = trendingItems.firstOrNull(),
-                        onClick = { trendingItems.firstOrNull()?.malId?.let(onAnimeClick) },
+                        onClick = { trendingItems.firstOrNull()?.aniListId?.let(onAnimeClick) },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                     Spacer(modifier = Modifier.height(20.dp))
@@ -102,7 +102,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                             title = "Continue Tracking",
                             items = continueItems,
                             isLoading = false,
-                            onItemClick = { it.malId?.let(onAnimeClick) }
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
                         )
                     }
                 }
@@ -111,7 +111,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         title = "Trending Now",
                         items = trendingItems,
                         isLoading = isLoading && trendingItems.isEmpty(),
-                        onItemClick = { it.malId?.let(onAnimeClick) }
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
                 item {
@@ -119,7 +119,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         title = "Popular This Season",
                         items = popularItems,
                         isLoading = isLoading && popularItems.isEmpty(),
-                        onItemClick = { it.malId?.let(onAnimeClick) }
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
                 item {
@@ -127,7 +127,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         title = "Top Rated",
                         items = topRatedItems,
                         isLoading = isLoading && topRatedItems.isEmpty(),
-                        onItemClick = { it.malId?.let(onAnimeClick) }
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
                 item {
@@ -135,7 +135,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         title = "New Releases",
                         items = newReleaseItems,
                         isLoading = isLoading && newReleaseItems.isEmpty(),
-                        onItemClick = { it.malId?.let(onAnimeClick) }
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
                 item {
@@ -143,7 +143,7 @@ fun HomeFeedScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         title = "Recommended For You",
                         items = recommendedItems,
                         isLoading = isLoading && recommendedItems.isEmpty(),
-                        onItemClick = { it.malId?.let(onAnimeClick) }
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
